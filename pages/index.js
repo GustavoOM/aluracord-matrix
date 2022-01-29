@@ -54,7 +54,7 @@ import appConfig from '../config.json';
               as="form"
               onSubmit={function (event){
                 event.preventDefault()
-                router.push("chat")
+                router.push(`chat?username=${username}`)
               }
 
               }

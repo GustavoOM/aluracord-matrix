@@ -1,22 +1,61 @@
-import { Box, Text, TextField, Image, Button } from '@skynexui/components';
+import { Box, Text, TextField, Image, Button} from '@skynexui/components';
+import { IoSend } from "react-icons/io5";
 import React from 'react';
 import appConfig from '../config.json';
+import {createClient} from "@supabase/supabase-js"
+import {ButtonSendSticker} from "../src/components/ButtonSendStick"
+
+
+const SUPABASE_URL = "https://purgrbiakzircqibvvyw.supabase.co"
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzM3MTc4NiwiZXhwIjoxOTU4OTQ3Nzg2fQ.wMFWELWxDyyfyRmZa93blQv1voIAUEV7VSNk9Ql8MIc"
+const supabaseClient = createClient(SUPABASE_URL,SUPABASE_ANON_KEY)
+
+function takeMessageInRealTime(addNewMessage){
+    return supabaseClient
+        .from("message")
+        .on("INSERT", (realtime) => {
+            addNewMessage(realtime.new)
+        })
+        .subscribe()
+}
+
+import {useRouter} from "next/router"
 
 export default function ChatPage() {
+    const router = useRouter()
+    const currentUser = router.query.username
     const [message, setMessage] = React.useState('')
     const [messageList, setMessageList] = React.useState([])
+
+
     // Sua lógica vai aqui
 
+    React.useEffect((data) => {
+        const supabaseData = supabaseClient
+            .from("message")
+            .select("*")
+            .order("id",{ascending:false})
+            .then((data) => {
+                setMessageList(data.data)
+            })
+        takeMessageInRealTime((newMessage)=>{
+            setMessageList((currentListValue) => {
+                return [ 
+                    newMessage,
+                    ...currentListValue
+                ]
+            })
+        })
+    },[])
+
     function handleNewMessage(newMessage) {
-        const message = {
-            id: messageList.length + 1,
-            from: "TESTE",
-            text: newMessage
+        if(newMessage){
+            const message = {
+                from: currentUser,
+                text: newMessage
+            }
+            supabaseClient.from("message").insert([message]).then(({data})=>{})
         }
-        setMessageList([
-            message,
-            ...messageList
-        ])
 
         setMessage("")
     }
@@ -67,7 +106,7 @@ export default function ChatPage() {
                             alignItems: 'center',
                         }}
                     >
-                        <TextField
+                        <TextField id = "tf"
                             value={message}
                             onChange={(event) => {
                                 const valor = event.target.value
@@ -90,6 +129,25 @@ export default function ChatPage() {
                                 backgroundColor: appConfig.theme.colors.neutrals[800],
                                 marginRight: '12px',
                                 color: appConfig.theme.colors.neutrals[200],
+                            }}
+                        />
+                        <Button 
+                            label='Enviar'
+                            onClick={() => {
+                                handleNewMessage(message)
+                                document.getElementById("tf").focus()
+                            }}
+                            styleSheet={{
+                                backgroundColor: appConfig.theme.colors.neutrals[800],
+                                height: "83%",
+                                marginBottom: "8px",
+                                marginRight: "8px",
+                            }}
+                        />
+                        <ButtonSendSticker 
+                            onStickerClick={(sticker)=>{
+                                handleNewMessage(`:sticker:$    {sticker}`)
+
                             }}
                         />
                     </Box>
@@ -118,7 +176,6 @@ function Header() {
 }
 
 function MessageList(props) {
-    console.log('MessageList', props);
     return (
         <Box
             tag="ul"
@@ -162,7 +219,7 @@ function MessageList(props) {
                                     display: 'inline-block',
                                     marginRight: '8px',
                                 }}
-                                src={`https://github.com/vanessametonini.png`}
+                                src={`https://github.com/${message.from}.png`}
                             />
                             <Text tag="strong">
                                 {message.from}
@@ -178,7 +235,13 @@ function MessageList(props) {
                                 {(new Date().toLocaleDateString())}
                             </Text>
                         </Box>
-                        {message.text}
+                        {message.text.startsWith(":sticker:")
+                        ?(
+                            <Image src={message.text.replace(":sticker:", "")}/>
+                        )
+                        :(
+                            message.text
+                        )}
                     </Text>
                 )
             })}
