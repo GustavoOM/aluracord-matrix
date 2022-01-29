@@ -19,6 +19,14 @@ function takeMessageInRealTime(addNewMessage){
         .subscribe()
 }
 
+function formatedDate(date){
+    let hour = Number(date.substr(11,2)) - 3
+    if (hour < 0){
+        hour = 24 + hour
+    }
+    return (`${hour.toString()}:${date.substr(14,2)} - ${date.substr(8,2)}/${date.substr(5,2)}/${date.substr(0,4)}`)
+}
+
 import {useRouter} from "next/router"
 
 export default function ChatPage() {
@@ -232,7 +240,7 @@ function MessageList(props) {
                                 }}
                                 tag="span"
                             >
-                                {(new Date().toLocaleDateString())}
+                                {formatedDate(message.created_at)}
                             </Text>
                         </Box>
                         {message.text.startsWith(":sticker:")
